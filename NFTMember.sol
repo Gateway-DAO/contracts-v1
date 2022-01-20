@@ -41,12 +41,21 @@ contract NFTMember is
     using Counters for Counters.Counter;
     using SafeMath for uint256;
 
-    bool public valid;
+    mapping(uint256 => bool) public valid;
+
+    struct Badge{
+        bool valid;
+        string logs;
+        uint256 sector;
+    }
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
+    mapping(uint256 => uint256) creationDate;
+
     event MINT(uint256 indexed tokenId);
+    event BURN(uint256 indexed tokenId);
 
     Counters.Counter private _tokenIdTracker;
 
@@ -79,6 +88,12 @@ contract NFTMember is
         _setupRole(PAUSER_ROLE, daoMinter);
     }
 
+    /*=========================
+
+     Getters
+
+    ==============================*/
+
     function _baseURI() internal view virtual override returns (string memory) {
         return _baseTokenURI;
     }
@@ -94,6 +109,26 @@ contract NFTMember is
         return super.tokenURI(_tokenId);
     }
 
+    function isValid(uint256 _tokenId) public view returns(bool){
+        return valid[_tokenId];
+    }
+
+    function getCreationDate(uint256 _tokenId) public view returns(uint256){
+        return creationDate[_tokenId]; 
+    }
+
+    /*=========================
+
+     Setters
+
+    ==============================*/
+
+    function changeValidStatus(uint256 _tokenId) public{
+        valid[_tokenId] = !valid[_tokenId];
+    }
+
+    
+
 
   
     /**
@@ -107,25 +142,28 @@ contract NFTMember is
      *
      * - the caller must have the `MINTER_ROLE`.
      */
-    function mint(address to, string memory _tokenURI) internal virtual _onlyMinter(){
+    function mint(address to, string memory _tokenURI) external virtual _onlyMinter(){
         require(hasRole(MINTER_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have minter role to mint");
 
         // We cannot just use balanceOf to create the new tokenId because tokens
         // can be burned (destroyed), so we need a separate counter.
         _mint(to, _tokenIdTracker.current());
         _setTokenURI(_tokenIdTracker.current(), _tokenURI);
+        creationDate[_tokenIdTracker.current()] = block.timestamp;
         emit MINT(_tokenIdTracker.current());
         _tokenIdTracker.increment();
     }
 
     function DAO_burn(uint256 _tokenId) external {
+        require(_isApprovedOrOwner(_msgSender(), _tokenId) || hasRole(MINTER_ROLE, _msgSender()), "You are not approved to burn this token");
+        valid[_tokenId] = false;
         _burn(_tokenId);
     }
 
       // @notice Burns the NFT with a specific token ID
     // @param _tokenId The ID of the token to burn
     function _burn(uint256 _tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(_tokenId);
+        _burn(_tokenId);
     }
 
 
@@ -144,20 +182,6 @@ contract NFTMember is
         _pause();
     }
    
-       /**
-     * @dev Add Minter
-     *
-     * See {ERC721Pausable} and {Pausable-_pause}.
-     *
-     * Requirements:
-     *
-     * - the caller must have the `DEFAULT_ADMIN_ROLE`.
-     */
-    function addMinter(address minter) public virtual {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have admin role to pause");
-        _setupRole(MINTER_ROLE, minter);
-    }
-
     /**
      * @dev Unpauses all token transfers.
      *
