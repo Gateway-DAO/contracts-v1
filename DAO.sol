@@ -43,6 +43,9 @@ contract DAO is Ownable, ReentrancyGuard, AccessControlEnumerable {
         id = _id;
         DAO_slug = _DAO_slug;
         organization_erc20 = _erc20Address;
+        description = _description;
+        website = _website;
+        name = _name;
 
         nft = new NFTMember(_name, _DAO_slug, "", address(this));
 
