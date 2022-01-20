@@ -17,6 +17,22 @@ contract DAOCreation is Ownable, ReentrancyGuard, AccessControlEnumerable {
          _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
+    /*===================================
+
+        VIEWS
+
+    =====================================*/
+
+     function getDAO(uint256 idx) external view returns(DAO){
+        return dao[idx];
+    }
+
+     /*===================================
+
+        Setters
+
+    =====================================*/
+
     function createDAO(address _erc20Address, string memory DAO_slug,  string memory name, string memory description, string memory website ) public{
         dao[dao_counter.current()] = new DAO(dao_counter.current(), _erc20Address, DAO_slug, name, description, website);
         dao_counter.increment();
