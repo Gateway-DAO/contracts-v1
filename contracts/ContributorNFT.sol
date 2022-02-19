@@ -170,7 +170,7 @@ ERC721Pausable
         transferEnabled = !transferEnabled;
     }
 
-    function addGuild(string memory name, address[] memory _admins) _onlyDAOAdmin{
+    function addGuild(string memory name, address[] memory _admins) public _onlyDAOAdmin{
         guildMapping[guildCounter++] = Guild(name, _admins);
     }
 
