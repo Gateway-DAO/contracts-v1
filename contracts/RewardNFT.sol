@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.3.2 (token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol)
-
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/extensions/ERC721Pausable.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "openzeppelin-solidity/contracts/access/AccessControlEnumerable.sol";
+import "openzeppelin-solidity/contracts/utils/Context.sol";
+import "openzeppelin-solidity/contracts/utils/Counters.sol";
+import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 
 /**
@@ -29,7 +27,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
  * roles, as well as the default admin role, which will let it grant both minter
  * and pauser roles to other accounts.
  */
-contract NFTMember is
+contract RewardNFT is
     Context,
     AccessControlEnumerable,
     ERC721Enumerable,
@@ -42,15 +40,14 @@ contract NFTMember is
     using SafeMath for uint256;
 
     mapping(uint256 => bool) public valid;
+    mapping(uint256 => string) private _ceramicIDs;
 
-    struct Badge{
-        bool valid;
-        string logs;
-        uint256 sector;
-    }
+    bool private transferEnabled;
 
+    address private minterAllowerAddr;
+
+    bytes32 public constant DAO_ADMIN_ROLE = keccak256("DAO_ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     mapping(uint256 => uint256) creationDate;
 
@@ -66,8 +63,8 @@ contract NFTMember is
         _;
     }
 
-     modifier _onlyAdmin(){
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have minter role to mint");
+     modifier _onlyDAOAdmin(){
+        require(hasRole(DAO_ADMIN_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have minter role to mint");
         _;
     }
 
@@ -79,13 +76,24 @@ contract NFTMember is
      * See {ERC721-tokenURI}.
      */
     constructor(string memory _name, string memory _symbol,
-        string memory baseTokenURI, address daoMinter) ERC721(_name, _symbol) {
+        string memory baseTokenURI, address[] memory daoAdmins, address _minterAllowerAddr, bool _allowTransfers) ERC721(_name, _symbol) {
+
+        require(_minterAllowerAddr != address(0),"ERC721: Minter allower can't be null");
         _baseTokenURI = baseTokenURI;
+
+        transferEnabled = _allowTransfers;
+        minterAllowerAddr = _minterAllowerAddr;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
-        _setupRole(MINTER_ROLE, daoMinter);
-        _setupRole(PAUSER_ROLE, daoMinter);
+        uint i;
+        while(i < daoAdmins.length){
+            require(daoAdmins[i] != address(0), "ERC721: Admins can't be null");
+            _setupRole(MINTER_ROLE, daoAdmins[i]);
+            i++;
+        }
+
+
     }
 
     /*=========================
@@ -109,6 +117,20 @@ contract NFTMember is
         return super.tokenURI(_tokenId);
     }
 
+    // @notice Returns the ceramic Id for a specific nft
+    // @param _tokenId The ID of the token to verify
+    function ceramicURI(uint256 _tokenId)
+    public
+    view
+    returns (string memory)
+    {
+        return _ceramicIDs[_tokenId];
+    }
+
+    function getTransferability() public view returns(bool){
+        return transferEnabled;
+    }
+
     function isValid(uint256 _tokenId) public view returns(bool){
         return valid[_tokenId];
     }
@@ -123,14 +145,15 @@ contract NFTMember is
 
     ==============================*/
 
-    function changeValidStatus(uint256 _tokenId) public{
+    function changeValidStatus(uint256 _tokenId) public _onlyDAOAdmin{
         valid[_tokenId] = !valid[_tokenId];
     }
 
-    
+    function setTransferability() public{
+        transferEnabled = !transferEnabled;
+    }
 
 
-  
     /**
      * @dev Creates a new token for `to`. Its token ID will be automatically
      * assigned (and available on the emitted {IERC721-Transfer} event), and the token
@@ -142,25 +165,66 @@ contract NFTMember is
      *
      * - the caller must have the `MINTER_ROLE`.
      */
-    function mint(address to, string memory _tokenURI) external virtual _onlyMinter(){
-        require(hasRole(MINTER_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have minter role to mint");
-
+    function mint(address to, string memory _tokenURI, string memory _ceramicStream) external virtual _onlyDAOAdmin{
         // We cannot just use balanceOf to create the new tokenId because tokens
         // can be burned (destroyed), so we need a separate counter.
         _mint(to, _tokenIdTracker.current());
         _setTokenURI(_tokenIdTracker.current(), _tokenURI);
         creationDate[_tokenIdTracker.current()] = block.timestamp;
+        _ceramicIDs[_tokenIdTracker.current()] = _ceramicStream;
         emit MINT(_tokenIdTracker.current());
         _tokenIdTracker.increment();
     }
 
-    function DAO_burn(uint256 _tokenId) external {
-        require(_isApprovedOrOwner(_msgSender(), _tokenId) || hasRole(MINTER_ROLE, _msgSender()), "You are not approved to burn this token");
-        valid[_tokenId] = false;
-        _burn(_tokenId);
+    function retroactiveMint(address[] memory to, string[] memory _tokenURI, string[] memory _ceramicStream) external virtual _onlyDAOAdmin{
+        require(to.length == _tokenURI.length && _tokenURI.length == _ceramicStream.length && to.length > 1, "ERC721: Invalid data.");
+        uint i;
+        while(i < to.length){
+            this.mint(to[i], _tokenURI[i], _ceramicStream[i]);
+            i++;
+        }
     }
 
-      // @notice Burns the NFT with a specific token ID
+    /**
+    * @dev See {IERC721-transferFrom}.
+     */
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override {
+        require(transferEnabled, "ERC721: Unable to transfer NFT");
+
+        super._transfer(from, to, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override {
+        require(transferEnabled, "ERC721: Unable to transfer NFT");
+        super.safeTransferFrom(from, to, tokenId, "");
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public virtual override {
+        require(transferEnabled, "ERC721: Unable to transfer NFT");
+        super._safeTransfer(from, to, tokenId, _data);
+    }
+
+
+    // @notice Burns the NFT with a specific token ID
     // @param _tokenId The ID of the token to burn
     function _burn(uint256 _tokenId) internal override(ERC721, ERC721URIStorage) {
         _burn(_tokenId);
@@ -175,10 +239,9 @@ contract NFTMember is
      *
      * Requirements:
      *
-     * - the caller must have the `PAUSER_ROLE`.
+     * - the caller must have the `DAO_ADMIN_ROLE`.
      */
-    function pause() public virtual {
-        require(hasRole(PAUSER_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have pauser role to pause");
+    function pause() public virtual _onlyDAOAdmin{
         _pause();
     }
    
@@ -189,10 +252,9 @@ contract NFTMember is
      *
      * Requirements:
      *
-     * - the caller must have the `PAUSER_ROLE`.
+     * - the caller must have the `DAO_ADMIN_ROLE`.
      */
-    function unpause() public virtual {
-        require(hasRole(PAUSER_ROLE, _msgSender()), "ERC721PresetMinterPauserAutoId: must have pauser role to unpause");
+    function unpause() public virtual _onlyDAOAdmin{
         _unpause();
     }
 

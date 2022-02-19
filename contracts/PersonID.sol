@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "./NFTMember.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/security/ReentrancyGuard.sol";
+import "openzeppelin-solidity/contracts/access/AccessControlEnumerable.sol";
+import "openzeppelin-solidity/contracts/utils/Counters.sol";
+import "./RewardNFT.sol";
 
 contract PersonId is Ownable, ReentrancyGuard, AccessControlEnumerable, Pausable {
     
