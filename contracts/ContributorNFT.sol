@@ -48,7 +48,11 @@ ERC721Pausable
 
     struct Guild{
         string name;
+        address[] admins;
     }
+
+    mapping(uint16 => Guild) guildMapping;
+    uint16 private guildCounter;
 
     bytes32 public constant DAO_ADMIN_ROLE = keccak256("DAO_ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -143,6 +147,15 @@ ERC721Pausable
         return creationDate[_tokenId];
     }
 
+    function getGuild(uint16 idx) public view returns(Guild memory){
+        return guildMapping[idx];
+    }
+
+    function getCurrentGuildsNumber() public view returns(uint16){
+        return guildCounter;
+    }
+
+
     /*=========================
 
      Setters
@@ -155,6 +168,10 @@ ERC721Pausable
 
     function setTransferability() public{
         transferEnabled = !transferEnabled;
+    }
+
+    function addGuild(string memory name, address[] memory _admins) _onlyDAOAdmin{
+        guildMapping[guildCounter++] = Guild(name, _admins);
     }
 
 
