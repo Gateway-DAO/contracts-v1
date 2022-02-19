@@ -8,6 +8,7 @@ import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/security/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/access/AccessControlEnumerable.sol";
 import {RewardNFT} from "./RewardNFT.sol";
+import {ContributorNFT} from "./ContributorNFT.sol";
 
 contract DAO is Ownable, ReentrancyGuard, AccessControlEnumerable {
     
@@ -24,6 +25,7 @@ contract DAO is Ownable, ReentrancyGuard, AccessControlEnumerable {
     address public organization_erc20;
 
     RewardNFT public nft;
+    ContributorNFT public contributorNFT;
     
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -47,6 +49,7 @@ contract DAO is Ownable, ReentrancyGuard, AccessControlEnumerable {
         name = _name;
 
         nft = new RewardNFT(_name, _DAO_slug,"", DAO_Admins, minterOperator, false);
+        contributorNFT = new ContributorNFT(_name, _DAO_slug,"", DAO_Admins, minterOperator, false);
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MINTER_ROLE, _msgSender());

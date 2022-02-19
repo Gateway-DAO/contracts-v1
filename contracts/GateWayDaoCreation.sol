@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "openzeppelin-solidity/contracts/security/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/access/AccessControlEnumerable.sol";
 import "openzeppelin-solidity/contracts/utils/Counters.sol";
-import "./DAO.sol";
+//import "./DAO.sol";
 
-contract DAOCreation is Ownable, ReentrancyGuard, AccessControlEnumerable {
-
+contract DAOCreation is  ReentrancyGuard, AccessControlEnumerable {
+/*
     using Counters for Counters.Counter;
     
     Counters.Counter private dao_counter;
@@ -21,7 +21,7 @@ contract DAOCreation is Ownable, ReentrancyGuard, AccessControlEnumerable {
 
         VIEWS
 
-    =====================================*/
+    =====================================
 
      function getDAO(uint256 idx) external view returns(DAO){
         return dao[idx];
@@ -31,10 +31,12 @@ contract DAOCreation is Ownable, ReentrancyGuard, AccessControlEnumerable {
 
         Setters
 
-    =====================================*/
+    =====================================
 
     function createDAO(address _erc20Address, string memory DAO_slug,  string memory name, string memory description, string memory website, address[] memory DAO_Admins, address minterOperator) public{
         dao[dao_counter.current()] = new DAO(dao_counter.current(), _erc20Address, DAO_slug, DAO_Admins, minterOperator, name, description, website);
         dao_counter.increment();
     }
+
+    */
 }
