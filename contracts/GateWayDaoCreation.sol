@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "openzeppelin-solidity/contracts/security/ReentrancyGuard.sol";
-import "openzeppelin-solidity/contracts/access/AccessControlEnumerable.sol";
-import "openzeppelin-solidity/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 //import "./DAO.sol";
 
 contract DAOCreation is  ReentrancyGuard, AccessControlEnumerable {
