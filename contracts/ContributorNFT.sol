@@ -234,7 +234,7 @@ contract ContributorNFT is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) public virtual override(ERC721, IERC721) {
         require(transferEnabled, "ERC721: Unable to transfer NFT");
 
         super._transfer(from, to, tokenId);
@@ -247,7 +247,7 @@ contract ContributorNFT is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) public virtual override(ERC721, IERC721) {
         require(transferEnabled, "ERC721: Unable to transfer NFT");
         super.safeTransferFrom(from, to, tokenId, "");
     }
@@ -260,7 +260,7 @@ contract ContributorNFT is
         address to,
         uint256 tokenId,
         bytes memory _data
-    ) public virtual override {
+    ) public virtual override(ERC721, IERC721) {
         require(transferEnabled, "ERC721: Unable to transfer NFT");
         super._safeTransfer(from, to, tokenId, _data);
     }
