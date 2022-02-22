@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require('dotenv').config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -20,6 +21,12 @@ module.exports = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true
+    },
+    rinkeby: {
+      allowUnlimitedContractSize: true,
+      accounts: [process.env.PRIVATE_KEY_1],
+      url: process.env.RINKEBY_URL,
+      chainId: 4
     }
   },
   solidity: {
@@ -27,7 +34,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 50
+        runs: 2000
       }
     }
   }

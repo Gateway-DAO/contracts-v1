@@ -283,7 +283,7 @@ contract RewardNFT is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721, IERC721) {
+    ) public virtual override(ERC721) {
         require(transferEnabled, "ERC721: Unable to transfer NFT");
 
         super._transfer(from, to, tokenId);
@@ -296,7 +296,7 @@ contract RewardNFT is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721, IERC721) {
+    ) public virtual override(ERC721) {
         require(transferEnabled, "ERC721: Unable to transfer NFT");
         super.safeTransferFrom(from, to, tokenId, "");
     }
@@ -309,7 +309,7 @@ contract RewardNFT is
         address to,
         uint256 tokenId,
         bytes memory _data
-    ) public virtual override(ERC721, IERC721) {
+    ) public virtual override(ERC721) {
         require(transferEnabled, "ERC721: Unable to transfer NFT");
         super._safeTransfer(from, to, tokenId, _data);
     }
