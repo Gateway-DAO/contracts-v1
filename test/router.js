@@ -25,17 +25,28 @@ describe("Router", function () {
     let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
     // 3. call deployRewardNFT
-    const deployTx = await router.callStatic.deployRewardNFT(
+    const deployTx = await router.deployNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
       sign,
-      nonce
+      nonce,
+      0
     );
 
-    expect(deployTx).to.be.properAddress;
+    const contractReceipt = await deployTx.wait();
+
+    const event = contractReceipt.events?.find(
+        (event) =>
+            event.event ===
+            `MintRewardNFT`
+    );
+
+    const nftAddr = event?.args?.['_address'];
+
+    expect(nftAddr).to.be.properAddress;
   });
 
   it("Should deploy a RewardNFT contract only once for the same nonce", async function () {
@@ -54,26 +65,28 @@ describe("Router", function () {
     let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
     // 3. call deployRewardNFT
-    const deployTx = await router.deployRewardNFT(
+    const deployTx = await router.deployNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
       sign,
-      nonce
+      nonce,
+      0
     );
 
     await deployTx.wait();
 
-    const deployTx2 = router.deployRewardNFT(
+    const deployTx2 = router.deployNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
       sign,
-      nonce
+      nonce,
+      0
     );
 
     await expect(deployTx2).to.be.revertedWith(
@@ -97,16 +110,27 @@ describe("Router", function () {
     let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
     // 3. call deployContributorNFT
-    const deployTx = await router.callStatic.deployContributorNFT(
+    const deployTx = await router.deployNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
       sign,
-      nonce
+      nonce,
+      1
     );
 
-    expect(deployTx).to.be.properAddress;
+    const contractReceipt = await deployTx.wait();
+
+    const event = contractReceipt.events?.find(
+        (event) =>
+            event.event ===
+            `MintContributorNFT`
+    );
+
+    const nftAddr = event?.args?.['_address'];
+
+    expect(nftAddr).to.be.properAddress;
   });
 });

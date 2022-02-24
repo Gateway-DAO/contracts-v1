@@ -68,7 +68,7 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
     }
 
     /**
-     * @notice Deploys a Reward NFT contract for a DAO
+     * @notice Deploys an NFT contract for a DAO
      *
      * @param _name The name of the NFT
      * @param _symbol The symbol of the NFT
@@ -77,6 +77,7 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
      * @param _allowTransfers A boolean value to authorize/unauthorize NFT transferibility
      * @param _signature Gateway signature to validate the deployment
      * @param _nonce A nonce passed by Gateway for validating the deployment
+     * @param _type The type of NFT being deployed (Reward or Contributor)
      */
     function deployNFT(
         string memory _name,
