@@ -14,37 +14,24 @@ describe("Router", function () {
 
     const gatewayAddress = await addr1.getAddress();
 
-    // 1. deploy Signature library
-    const Signature = await ethers.getContractFactory("Signature");
-    const signature = await Signature.deploy();
-    await signature.deployed();
-
-    // 2. deploy router
-    const Router = await ethers.getContractFactory("Router", {
-      libraries: {
-        Signature: signature.address,
-      },
-    });
+    // 1. deploy router
+    const Router = await ethers.getContractFactory("Router");
     const router = await Router.deploy(gatewayAddress);
     await router.deployed();
 
-    // 3. sign a message with a nonce
+    // 2. sign a message with a nonce
     let nonce = "54758568967";
     let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
-    let sign = ethers.utils.splitSignature(
-      await addr1.signMessage(ethers.utils.arrayify(messageHash))
-    );
+    let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
-    // 4. call deployRewardNFT
+    // 3. call deployRewardNFT
     const deployTx = await router.callStatic.deployRewardNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
-      sign.v,
-      sign.r,
-      sign.s,
+      sign,
       nonce
     );
 
@@ -56,37 +43,24 @@ describe("Router", function () {
 
     const gatewayAddress = await addr1.getAddress();
 
-    // 1. deploy Signature library
-    const Signature = await ethers.getContractFactory("Signature");
-    const signature = await Signature.deploy();
-    await signature.deployed();
-
-    // 2. deploy router
-    const Router = await ethers.getContractFactory("Router", {
-      libraries: {
-        Signature: signature.address,
-      },
-    });
+    // 1. deploy router
+    const Router = await ethers.getContractFactory("Router");
     const router = await Router.deploy(gatewayAddress);
     await router.deployed();
 
-    // 3. sign a message with a nonce
+    // 2. sign a message with a nonce
     let nonce = "54758568967";
     let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
-    let sign = ethers.utils.splitSignature(
-      await addr1.signMessage(ethers.utils.arrayify(messageHash))
-    );
+    let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
-    // 4. call deployRewardNFT
+    // 3. call deployRewardNFT
     const deployTx = await router.deployRewardNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
-      sign.v,
-      sign.r,
-      sign.s,
+      sign,
       nonce
     );
 
@@ -98,9 +72,7 @@ describe("Router", function () {
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
-      sign.v,
-      sign.r,
-      sign.s,
+      sign,
       nonce
     );
 
@@ -114,37 +86,24 @@ describe("Router", function () {
 
     const gatewayAddress = await addr1.getAddress();
 
-    // 1. deploy Signature library
-    const Signature = await ethers.getContractFactory("Signature");
-    const signature = await Signature.deploy();
-    await signature.deployed();
-
-    // 2. deploy router
-    const Router = await ethers.getContractFactory("Router", {
-      libraries: {
-        Signature: signature.address,
-      },
-    });
+    // 1. deploy router
+    const Router = await ethers.getContractFactory("Router");
     const router = await Router.deploy(gatewayAddress);
     await router.deployed();
 
-    // 3. sign a message with a nonce
+    // 2. sign a message with a nonce
     let nonce = "54758568967";
     let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
-    let sign = ethers.utils.splitSignature(
-      await addr1.signMessage(ethers.utils.arrayify(messageHash))
-    );
+    let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
-    // 4. call deployContributorNFT
+    // 3. call deployContributorNFT
     const deployTx = await router.callStatic.deployContributorNFT(
       NFT.name,
       NFT.symbol,
       NFT.baseTokenURI,
       [await owner.getAddress(), await addr2.getAddress()],
       true,
-      sign.v,
-      sign.r,
-      sign.s,
+      sign,
       nonce
     );
 

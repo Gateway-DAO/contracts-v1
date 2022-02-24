@@ -7,16 +7,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 // NFT Types
 import {RewardNFT} from "./RewardNFT.sol";
 import {ContributorNFT} from "./ContributorNFT.sol";
 
-import {Signature} from "./Signature.sol";
-
 contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
-    // SafeMath
-    using SafeMath for uint256;
+    // ECDSA
+    using ECDSA for bytes32;
 
     // Gateway verification address
     address private GATEWAY_ADDRESS;
@@ -26,6 +25,14 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
 
     // Wei to ETH conversion
     uint256 private immutable UNIT = 10**18;
+
+    enum NFTType{
+        REWARD,
+        CONTRIBUTOR
+    }
+
+    event MintRewardNFT(address _address);
+    event MintContributorNFT(address _address);
 
     constructor(address _gatewayAddress) {
         require(
@@ -38,28 +45,19 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
     /**
      * @notice Checks if a signature came from Gateway.
      *
-     * @param _v Recovery ID of the signature
-     * @param _r Output from the ECDSA signature
-     * @param _s Output from the ECDSA signature
+     * @param _signature Gateway signature to validate the deployment
      * @param _nonce A nonce passed by Gateway for validating the deployment
      */
-    function validateSignature(
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s,
-        string memory _nonce
-    ) public {
+    function validateSignature(bytes memory _signature, string memory _nonce) public {
         // Verify if Gateway has given permissions for the minter
-        bytes32 messageHash = Signature.hashMessage(_nonce);
-        bytes32 signedMessageHash = Signature.hashSignedMessage(messageHash);
+        bytes32 hash = keccak256(abi.encodePacked(_nonce));
+        bytes32 messageHash = hash.toEthSignedMessageHash();
+
+        // Verify that the message's signer is the owner of the order
+        address signer = messageHash.recover(_signature);
+
         require(
-            Signature.verifyMessageAuthenticity(
-                signedMessageHash,
-                GATEWAY_ADDRESS,
-                _v,
-                _r,
-                _s
-            ),
+            signer == GATEWAY_ADDRESS,
             "This message wasn't created by Gateway"
         );
         require(
@@ -77,75 +75,51 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
      * @param _baseTokenURI The base token URI of the NFT
      * @param _daoAdmins The DAO admins that have permission to mint the NFT
      * @param _allowTransfers A boolean value to authorize/unauthorize NFT transferibility
-     * @param _v Recovery ID of the signature
-     * @param _r Output from the ECDSA signature
-     * @param _s Output from the ECDSA signature
+     * @param _signature Gateway signature to validate the deployment
      * @param _nonce A nonce passed by Gateway for validating the deployment
      */
-    function deployRewardNFT(
+    function deployNFT(
         string memory _name,
         string memory _symbol,
         string memory _baseTokenURI,
         address[] memory _daoAdmins,
         bool _allowTransfers,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s,
-        string memory _nonce
+        bytes memory _signature,
+        string memory _nonce,
+        NFTType _type
     ) public returns (address) {
+        require(_type == NFTType.CONTRIBUTOR || _type == NFTType.REWARD, "Must be a Reward or Contributor NFT");
+
         // Verify if Gateway has given permissions for the minter
-        this.validateSignature(_v, _r, _s, _nonce);
+        this.validateSignature(_signature, _nonce);
+
+        IERC721 nft;
 
         // Deploy RewardNFT contract
-        RewardNFT nft = new RewardNFT(
-            _name,
-            _symbol,
-            _baseTokenURI,
-            _daoAdmins,
-            GATEWAY_ADDRESS,
-            _allowTransfers
-        );
+        if (_type == NFTType.REWARD) {
+            nft = new RewardNFT(
+                _name,
+                _symbol,
+                _baseTokenURI,
+                _daoAdmins,
+                GATEWAY_ADDRESS,
+                _allowTransfers
+            );
 
-        // Return the contract address, after deploying
-        return address(nft);
-    }
+            emit MintRewardNFT(address(nft));
+        }
+        else if (_type == NFTType.CONTRIBUTOR) {
+            nft = new ContributorNFT(
+                _name,
+                _symbol,
+                _baseTokenURI,
+                _daoAdmins,
+                GATEWAY_ADDRESS,
+                _allowTransfers
+            );
 
-    /**
-     * @notice Deploys a Contributor NFT contract for a DAO
-     *
-     * @param _name The name of the NFT
-     * @param _symbol The symbol of the NFT
-     * @param _baseTokenURI The base token URI of the NFT
-     * @param _daoAdmins The DAO admins that have permission to mint the NFT
-     * @param _allowTransfers A boolean value to authorize/unauthorize NFT transferibility
-     * @param _v Recovery ID of the signature
-     * @param _r Output from the ECDSA signature
-     * @param _s Output from the ECDSA signature
-     * @param _nonce A nonce passed by Gateway for validating the deployment
-     */
-    function deployContributorNFT(
-        string memory _name,
-        string memory _symbol,
-        string memory _baseTokenURI,
-        address[] memory _daoAdmins,
-        bool _allowTransfers,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s,
-        string memory _nonce
-    ) public returns (address) {
-        // Verify if Gateway has given permissions for the minter
-        this.validateSignature(_v, _r, _s, _nonce);
-
-        // Deploy ContributorNFT contract
-        ContributorNFT nft = new ContributorNFT(
-            _name,
-            _symbol,
-            _baseTokenURI,
-            _daoAdmins,
-            GATEWAY_ADDRESS,
-            _allowTransfers
-        );
+            emit MintContributorNFT(address(nft));
+        }
 
         // Return the contract address, after deploying
         return address(nft);
@@ -158,10 +132,7 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
      * @param _nonce The nonce to clear
      */
     function clearNonce(string memory _nonce) public onlyOwner {
-        require(
-            seenNonces[_nonce],
-            "This nonce is clear or not activated"
-        );
+        require(seenNonces[_nonce], "This nonce is clear or not activated");
 
         // Clear the nonce
         seenNonces[_nonce] = false;

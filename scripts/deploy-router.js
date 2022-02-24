@@ -2,19 +2,9 @@ const hre = require("hardhat");
 require('dotenv').config();
 
 async function main() {
-  // We deploy the Signature library first
-  const Signature = await hre.ethers.getContractFactory("Signature");
-  const signature = await Signature.deploy();
-
-  await signature.deployed();
-
   // We get the contract to deploy
-  const Router = await hre.ethers.getContractFactory("Router", {
-    libraries: {
-      Signature: signature.address
-    }
-  });
-  const router = await Router.deploy(process.env.PRIVATE_KEY_GATEWAY);
+  const Router = await hre.ethers.getContractFactory("Router");
+  const router = await Router.deploy("0xA8402235B16325B3CD94764246fa289f8d7a0Ed0");
 
   await router.deployed();
 

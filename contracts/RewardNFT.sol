@@ -10,8 +10,7 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
-import {Signature} from "./Signature.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @dev {ERC721} token, including:
@@ -39,6 +38,7 @@ contract RewardNFT is
     //attach libaries
     using Counters for Counters.Counter;
     using SafeMath for uint256;
+    using ECDSA for bytes32;
 
     mapping(uint256 => bool) public valid;
     mapping(uint256 => string) private _ceramicIDs;
@@ -81,28 +81,19 @@ contract RewardNFT is
     /**
      * @notice Checks if a signature came from Gateway.
      *
-     * @param _v Recovery ID of the signature
-     * @param _r Output from the ECDSA signature
-     * @param _s Output from the ECDSA signature
+     * @param _signature Gateway signature to validate the deployment
      * @param _nonce A nonce passed by Gateway for validating the deployment
      */
-    function validateSignature(
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s,
-        string memory _nonce
-    ) public {
+    function validateSignature(bytes memory _signature, string memory _nonce) public {
         // Verify if Gateway has given permissions for the minter
-        bytes32 messageHash = Signature.hashMessage(_nonce);
-        bytes32 signedMessageHash = Signature.hashSignedMessage(messageHash);
+        bytes32 hash = keccak256(abi.encodePacked(_nonce));
+        bytes32 messageHash = hash.toEthSignedMessageHash();
+
+        // Verify that the message's signer is the owner of the order
+        address signer = messageHash.recover(_signature);
+
         require(
-            Signature.verifyMessageAuthenticity(
-                signedMessageHash,
-                minterAllowerAddr,
-                _v,
-                _r,
-                _s
-            ),
+            signer == minterAllowerAddr,
             "This message wasn't created by Gateway"
         );
         require(
@@ -214,13 +205,11 @@ contract RewardNFT is
         address to,
         string memory _tokenURI,
         string memory _ceramicStream,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s,
+        bytes memory _signature,
         string memory _nonce
     ) external virtual {
         // Verify if Gateway has given permissions for the minter
-        this.validateSignature(_v, _r, _s, _nonce);
+        this.validateSignature(_signature, _nonce);
 
         // We cannot just use balanceOf to create the new tokenId because tokens
         // can be burned (destroyed), so we need a separate counter.
