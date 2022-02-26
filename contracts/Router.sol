@@ -1,32 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-// NFT Types
-import {RewardNFT} from "./RewardNFT.sol";
-import {ContributorNFT} from "./ContributorNFT.sol";
+import "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
+import "@rari-capital/solmate/src/utils/CREATE3.sol";
 
-contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
+import "./Signature.sol";
+import "./interfaces/IFactory.sol";
+
+contract Router is Ownable, ReentrancyGuard, Signature {
     // ECDSA
     using ECDSA for bytes32;
 
-    // Gateway verification address
-    address private GATEWAY_ADDRESS;
+    // Factories
+    address private REWARD_FACTORY;
+    address private CONTRIBUTOR_FACTORY;
 
-    // Nonce-validation array, for guaranteeing the uniqueness of signatures and mitigate replay attacks.
-    mapping(string => bool) private seenNonces;
-
-    // Wei to ETH conversion
-    uint256 private immutable UNIT = 10**18;
-
-    enum NFTType{
+    // Types of NFTs
+    enum NFTType {
         REWARD,
         CONTRIBUTOR
     }
@@ -34,37 +27,34 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
     event MintRewardNFT(address _address);
     event MintContributorNFT(address _address);
 
-    constructor(address _gatewayAddress) {
+    /**
+     * @notice Initializes the contract setting Gateway's signature address and NFT factories.
+     *
+     * @param _gatewayAddress Gateway's signature address (for permission validation).
+     * @param _rewardFactoryAddress RewardNFTFactory's address (for deploying RewardNFT contracts).
+     * @param _contributorFactoryAddress ContributorNFTFactory's address (for deploying ContributorNFT contracts).
+     */
+    constructor(
+        address _gatewayAddress,
+        address _rewardFactoryAddress,
+        address _contributorFactoryAddress
+    ) {
         require(
             msg.sender != _gatewayAddress,
             "Verification address can't be the sender's address"
         );
-        GATEWAY_ADDRESS = _gatewayAddress;
-    }
-
-    /**
-     * @notice Checks if a signature came from Gateway.
-     *
-     * @param _signature Gateway signature to validate the deployment
-     * @param _nonce A nonce passed by Gateway for validating the deployment
-     */
-    function validateSignature(bytes memory _signature, string memory _nonce) public {
-        // Verify if Gateway has given permissions for the minter
-        bytes32 hash = keccak256(abi.encodePacked(_nonce));
-        bytes32 messageHash = hash.toEthSignedMessageHash();
-
-        // Verify that the message's signer is the owner of the order
-        address signer = messageHash.recover(_signature);
-
         require(
-            signer == GATEWAY_ADDRESS,
-            "This message wasn't created by Gateway"
+            IFactory(_rewardFactoryAddress).owner() == msg.sender,
+            "Factory isn't owned by Gateway"
         );
         require(
-            !seenNonces[_nonce],
-            "This nonce was used on a previous deployment"
+            IFactory(_contributorFactoryAddress).owner() == msg.sender,
+            "Factory isn't owned by Gateway"
         );
-        seenNonces[_nonce] = true;
+
+        SIGNER = _gatewayAddress;
+        REWARD_FACTORY = _rewardFactoryAddress;
+        CONTRIBUTOR_FACTORY = _contributorFactoryAddress;
     }
 
     /**
@@ -88,54 +78,52 @@ contract Router is Ownable, ReentrancyGuard, AccessControlEnumerable {
         bytes memory _signature,
         string memory _nonce,
         NFTType _type
-    ) public returns (address) {
-        require(_type == NFTType.CONTRIBUTOR || _type == NFTType.REWARD, "Must be a Reward or Contributor NFT");
+    ) public {
+        require(
+            _type == NFTType.CONTRIBUTOR || _type == NFTType.REWARD,
+            "Must be a Reward or Contributor NFT"
+        );
 
         // Verify if Gateway has given permissions for the minter
-        this.validateSignature(_signature, _nonce);
+        validateSignature(_signature, _nonce);
 
-        IERC721 nft;
+        IFactory factory = IFactory(
+            _type == NFTType.REWARD ? REWARD_FACTORY : CONTRIBUTOR_FACTORY
+        );
 
-        // Deploy RewardNFT contract
+        require(factory.owner() == owner(), "Factory isn't owned by Gateway");
+
+        address nft = factory.deploy(
+            _name,
+            _symbol,
+            _baseTokenURI,
+            _daoAdmins,
+            SIGNER,
+            _allowTransfers
+        );
+
         if (_type == NFTType.REWARD) {
-            nft = new RewardNFT(
-                _name,
-                _symbol,
-                _baseTokenURI,
-                _daoAdmins,
-                GATEWAY_ADDRESS,
-                _allowTransfers
-            );
-
-            emit MintRewardNFT(address(nft));
+            emit MintRewardNFT(nft);
+        } else if (_type == NFTType.CONTRIBUTOR) {
+            emit MintContributorNFT(nft);
         }
-        else if (_type == NFTType.CONTRIBUTOR) {
-            nft = new ContributorNFT(
-                _name,
-                _symbol,
-                _baseTokenURI,
-                _daoAdmins,
-                GATEWAY_ADDRESS,
-                _allowTransfers
-            );
-
-            emit MintContributorNFT(address(nft));
-        }
-
-        // Return the contract address, after deploying
-        return address(nft);
     }
 
     /**
-     * @notice Cleans nonce array
-     * @dev Function only triggable by the owner of this contract.
-     *
-     * @param _nonce The nonce to clear
+     * Factory Information
      */
-    function clearNonce(string memory _nonce) public onlyOwner {
-        require(seenNonces[_nonce], "This nonce is clear or not activated");
 
-        // Clear the nonce
-        seenNonces[_nonce] = false;
+    /**
+     * @dev Returns the address of the RewardNFT factory.
+     */
+    function getRewardNFTFactoryAddress() public view returns (address) {
+        return REWARD_FACTORY;
+    }
+
+    /**
+     * @dev Returns the address of the ContributorNFT factory.
+     */
+    function getContributorNFTFactoryAddress() public view returns (address) {
+        return CONTRIBUTOR_FACTORY;
     }
 }

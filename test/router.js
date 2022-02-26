@@ -9,128 +9,251 @@ const NFT = {
 };
 
 describe("Router", function () {
-  it("Should deploy a RewardNFT contract", async function () {
-    const [owner, addr1, addr2] = await ethers.getSigners();
+  describe("NFT Factories", function () {
+    it("Should deploy a RewardNFTFactory contract", async function () {
+      // 1. deploy factory
+      const Factory = await ethers.getContractFactory("RewardNFTFactory");
+      const factory = await Factory.deploy();
+      await factory.deployed();
 
-    const gatewayAddress = await addr1.getAddress();
+      expect(factory.address).to.be.properAddress;
+    });
 
-    // 1. deploy router
-    const Router = await ethers.getContractFactory("Router");
-    const router = await Router.deploy(gatewayAddress);
-    await router.deployed();
+    it("Should deploy a ContributorNFTFactory contract", async function () {
+      // 1. deploy factory
+      const Factory = await ethers.getContractFactory("ContributorNFTFactory");
+      const factory = await Factory.deploy();
+      await factory.deployed();
 
-    // 2. sign a message with a nonce
-    let nonce = "54758568967";
-    let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
-    let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
-
-    // 3. call deployRewardNFT
-    const deployTx = await router.deployNFT(
-      NFT.name,
-      NFT.symbol,
-      NFT.baseTokenURI,
-      [await owner.getAddress(), await addr2.getAddress()],
-      true,
-      sign,
-      nonce,
-      0
-    );
-
-    const contractReceipt = await deployTx.wait();
-
-    const event = contractReceipt.events?.find(
-        (event) =>
-            event.event ===
-            `MintRewardNFT`
-    );
-
-    const nftAddr = event?.args?.['_address'];
-
-    expect(nftAddr).to.be.properAddress;
+      expect(factory.address).to.be.properAddress;
+    });
   });
 
-  it("Should deploy a RewardNFT contract only once for the same nonce", async function () {
-    const [owner, addr1, addr2] = await ethers.getSigners();
+  describe("NFT Deployment", function () {
+    it("Should deploy a RewardNFT contract", async function () {
+      const [owner, addr1, addr2] = await ethers.getSigners();
 
-    const gatewayAddress = await addr1.getAddress();
+      const gatewayAddress = await addr1.getAddress();
 
-    // 1. deploy router
-    const Router = await ethers.getContractFactory("Router");
-    const router = await Router.deploy(gatewayAddress);
-    await router.deployed();
+      // 1. deploy factories
+      const RewardFactory = await ethers.getContractFactory("RewardNFTFactory");
+      const factory1 = await RewardFactory.deploy();
+      await factory1.deployed();
 
-    // 2. sign a message with a nonce
-    let nonce = "54758568967";
-    let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
-    let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
+      const ContributorFactory = await ethers.getContractFactory(
+        "ContributorNFTFactory"
+      );
+      const factory2 = await ContributorFactory.deploy();
+      await factory2.deployed();
 
-    // 3. call deployRewardNFT
-    const deployTx = await router.deployNFT(
-      NFT.name,
-      NFT.symbol,
-      NFT.baseTokenURI,
-      [await owner.getAddress(), await addr2.getAddress()],
-      true,
-      sign,
-      nonce,
-      0
-    );
+      // 2. deploy router
+      const Router = await ethers.getContractFactory("Router");
+      const router = await Router.deploy(
+        gatewayAddress,
+        factory1.address,
+        factory2.address
+      );
+      await router.deployed();
 
-    await deployTx.wait();
+      // 3. sign a message with a nonce
+      let nonce = "54758568967";
+      let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
+      let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
 
-    const deployTx2 = router.deployNFT(
-      NFT.name,
-      NFT.symbol,
-      NFT.baseTokenURI,
-      [await owner.getAddress(), await addr2.getAddress()],
-      true,
-      sign,
-      nonce,
-      0
-    );
+      // 4. call deployRewardNFT
+      const deployTx = await router.deployNFT(
+        NFT.name,
+        NFT.symbol,
+        NFT.baseTokenURI,
+        [await owner.getAddress(), await addr2.getAddress()],
+        true,
+        sign,
+        nonce,
+        0
+      );
 
-    await expect(deployTx2).to.be.revertedWith(
-      "This nonce was used on a previous deployment"
-    );
-  });
+      const contractReceipt = await deployTx.wait();
 
-  it("Should deploy a ContributorNFT contract", async function () {
-    const [owner, addr1, addr2] = await ethers.getSigners();
+      const event = contractReceipt.events?.find(
+        (event) => event.event === `MintRewardNFT`
+      );
 
-    const gatewayAddress = await addr1.getAddress();
+      const nftAddr = event?.args?.["_address"];
 
-    // 1. deploy router
-    const Router = await ethers.getContractFactory("Router");
-    const router = await Router.deploy(gatewayAddress);
-    await router.deployed();
+      expect(nftAddr).to.be.properAddress;
+    });
 
-    // 2. sign a message with a nonce
-    let nonce = "54758568967";
-    let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
-    let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
+    it("Should deploy a RewardNFT contract only once for the same nonce", async function () {
+      const [owner, addr1, addr2] = await ethers.getSigners();
 
-    // 3. call deployContributorNFT
-    const deployTx = await router.deployNFT(
-      NFT.name,
-      NFT.symbol,
-      NFT.baseTokenURI,
-      [await owner.getAddress(), await addr2.getAddress()],
-      true,
-      sign,
-      nonce,
-      1
-    );
+      const gatewayAddress = await addr1.getAddress();
 
-    const contractReceipt = await deployTx.wait();
+      // 1. deploy factories
+      const RewardFactory = await ethers.getContractFactory("RewardNFTFactory");
+      const factory1 = await RewardFactory.deploy();
+      await factory1.deployed();
 
-    const event = contractReceipt.events?.find(
-        (event) =>
-            event.event ===
-            `MintContributorNFT`
-    );
+      const ContributorFactory = await ethers.getContractFactory(
+        "ContributorNFTFactory"
+      );
+      const factory2 = await ContributorFactory.deploy();
+      await factory2.deployed();
 
-    const nftAddr = event?.args?.['_address'];
+      // 2. deploy router
+      const Router = await ethers.getContractFactory("Router");
+      const router = await Router.deploy(
+        gatewayAddress,
+        factory1.address,
+        factory2.address
+      );
+      await router.deployed();
 
-    expect(nftAddr).to.be.properAddress;
+      // 3. sign a message with a nonce
+      let nonce = "54758568967";
+      let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
+      let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
+
+      // 3. call deployRewardNFT
+      const deployTx = await router.deployNFT(
+        NFT.name,
+        NFT.symbol,
+        NFT.baseTokenURI,
+        [await owner.getAddress(), await addr2.getAddress()],
+        true,
+        sign,
+        nonce,
+        0
+      );
+
+      await deployTx.wait();
+
+      const deployTx2 = router.deployNFT(
+        NFT.name,
+        NFT.symbol,
+        NFT.baseTokenURI,
+        [await owner.getAddress(), await addr2.getAddress()],
+        true,
+        sign,
+        nonce,
+        0
+      );
+
+      await expect(deployTx2).to.be.revertedWith(
+        "This nonce was used on a previous deployment"
+      );
+    });
+
+    it("Should deploy a ContributorNFT contract", async function () {
+      const [owner, addr1, addr2] = await ethers.getSigners();
+
+      const gatewayAddress = await addr1.getAddress();
+
+      // 1. deploy factories
+      const RewardFactory = await ethers.getContractFactory("RewardNFTFactory");
+      const factory1 = await RewardFactory.deploy();
+      await factory1.deployed();
+
+      const ContributorFactory = await ethers.getContractFactory(
+        "ContributorNFTFactory"
+      );
+      const factory2 = await ContributorFactory.deploy();
+      await factory2.deployed();
+
+      // 2. deploy router
+      const Router = await ethers.getContractFactory("Router");
+      const router = await Router.deploy(
+        gatewayAddress,
+        factory1.address,
+        factory2.address
+      );
+      await router.deployed();
+
+      // 2. sign a message with a nonce
+      let nonce = "54758568967";
+      let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
+      let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
+
+      // 3. call deployContributorNFT
+      const deployTx = await router.deployNFT(
+        NFT.name,
+        NFT.symbol,
+        NFT.baseTokenURI,
+        [await owner.getAddress(), await addr2.getAddress()],
+        true,
+        sign,
+        nonce,
+        1
+      );
+
+      const contractReceipt = await deployTx.wait();
+
+      const event = contractReceipt.events?.find(
+        (event) => event.event === `MintContributorNFT`
+      );
+
+      const nftAddr = event?.args?.["_address"];
+
+      expect(nftAddr).to.be.properAddress;
+    });
+
+    it("Should deploy a ContributorNFT contract only once for the same nonce", async function () {
+      const [owner, addr1, addr2] = await ethers.getSigners();
+
+      const gatewayAddress = await addr1.getAddress();
+
+      // 1. deploy factories
+      const RewardFactory = await ethers.getContractFactory("RewardNFTFactory");
+      const factory1 = await RewardFactory.deploy();
+      await factory1.deployed();
+
+      const ContributorFactory = await ethers.getContractFactory(
+        "ContributorNFTFactory"
+      );
+      const factory2 = await ContributorFactory.deploy();
+      await factory2.deployed();
+
+      // 2. deploy router
+      const Router = await ethers.getContractFactory("Router");
+      const router = await Router.deploy(
+        gatewayAddress,
+        factory1.address,
+        factory2.address
+      );
+      await router.deployed();
+
+      // 3. sign a message with a nonce
+      let nonce = "54758568967";
+      let messageHash = ethers.utils.solidityKeccak256(["string"], [nonce]);
+      let sign = await addr1.signMessage(ethers.utils.arrayify(messageHash));
+
+      // 3. call deployRewardNFT
+      const deployTx = await router.deployNFT(
+        NFT.name,
+        NFT.symbol,
+        NFT.baseTokenURI,
+        [await owner.getAddress(), await addr2.getAddress()],
+        true,
+        sign,
+        nonce,
+        1
+      );
+
+      await deployTx.wait();
+
+      const deployTx2 = router.deployNFT(
+        NFT.name,
+        NFT.symbol,
+        NFT.baseTokenURI,
+        [await owner.getAddress(), await addr2.getAddress()],
+        true,
+        sign,
+        nonce,
+        0
+      );
+
+      await expect(deployTx2).to.be.revertedWith(
+        "This nonce was used on a previous deployment"
+      );
+    });
   });
 });
