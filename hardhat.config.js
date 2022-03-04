@@ -27,6 +27,13 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY_1],
       url: process.env.RINKEBY_URL,
       chainId: 4
+    },
+    polygon: {
+      allowUnlimitedContractSize: true,
+      accounts: [process.env.PRIVATE_KEY_1],
+      url: process.env.POLYGON_URL,
+      chainId: 137,
+      gasPrice: 50000000,
     }
   },
   solidity: {

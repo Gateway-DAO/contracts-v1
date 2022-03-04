@@ -81,7 +81,7 @@ contract ContributorNFT is
     modifier _onlyDAOAdmin() {
         require(
             hasRole(DAO_ADMIN_ROLE, _msgSender()),
-            "ERC721PresetMinterPauserAutoId: must have minter role to mint"
+            "ERC721PresetMinterPauserAutoId: must have DAO admin role to mint"
         );
         _;
     }
@@ -111,11 +111,12 @@ contract ContributorNFT is
         minterAllowerAddr = _minterAllowerAddr;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(DAO_ADMIN_ROLE, address(this));
 
         uint256 i;
         while (i < daoAdmins.length) {
             require(daoAdmins[i] != address(0), "ERC721: Admins can't be null");
-            _setupRole(MINTER_ROLE, daoAdmins[i]);
+            _setupRole(DAO_ADMIN_ROLE, daoAdmins[i]);
             i++;
         }
     }
@@ -126,7 +127,9 @@ contract ContributorNFT is
      * @param _signature Gateway signature to validate the deployment
      * @param _nonce A nonce passed by Gateway for validating the deployment
      */
-    function validateSignature(bytes memory _signature, string memory _nonce) public {
+    function validateSignature(bytes memory _signature, string memory _nonce)
+        public
+    {
         // Verify if Gateway has given permissions for the minter
         bytes32 hash = keccak256(abi.encodePacked(_nonce));
         bytes32 messageHash = hash.toEthSignedMessageHash();
