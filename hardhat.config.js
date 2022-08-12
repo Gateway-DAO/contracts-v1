@@ -28,6 +28,12 @@ module.exports = {
       url: process.env.RINKEBY_URL,
       chainId: 4
     },
+    goerli: {
+      allowUnlimitedContractSize: true,
+      accounts: [process.env.PRIVATE_KEY_1],
+      url: process.env.GORLI_URL,
+      chainId: 5
+    },
     polygon: {
       allowUnlimitedContractSize: true,
       accounts: [process.env.PRIVATE_KEY_1],
