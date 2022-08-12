@@ -1,22 +1,22 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
-contract CredentialNFT is ERC721URIStorage, Ownable, ERC2771Context {
+contract CredentialNFT is ERC721URIStorage, ERC2771Context, Ownable {
     using Counters for Counters.Counter;
 
     mapping(string => bool) userMetaDataURIMinted;
 
-    event MINT(uint256 indexed tokenId);
-    event BURN(uint256 indexed tokenId);
+    event MintedNFT(uint256 indexed tokenId, address indexed holder, string uri);
+    event BurnedNFT(uint256 indexed tokenId);
 
     Counters.Counter private tokenIdTracker;
 
-    constructor(address trustedForwarder) ERC721("Credential NFT", "GNFT") ERC2771Context(trustedForwarder) {}
+    constructor(address _trustedForwarder) ERC721("Credential NFT", "GNFT") ERC2771Context(_trustedForwarder) {}
 
     /**
      * @dev A method to mint NFT
@@ -33,7 +33,7 @@ contract CredentialNFT is ERC721URIStorage, Ownable, ERC2771Context {
         _mint(to, tokenIdTracker.current());
         _setTokenURI(tokenIdTracker.current(), _tokenURI);
         userMetaDataURIMinted[_tokenURI] = true;
-        emit MINT(tokenIdTracker.current());
+        emit MintedNFT(tokenIdTracker.current(), to, _tokenURI);
     }
 
     /**
@@ -44,7 +44,7 @@ contract CredentialNFT is ERC721URIStorage, Ownable, ERC2771Context {
         require(_exists(_tokenId), "CredentialNFT: Requested to burn for non-existent token");
         _burn(_tokenId);
         tokenIdTracker.decrement();
-        emit BURN(_tokenId);
+        emit BurnedNFT(_tokenId);
     }
 
     /**
