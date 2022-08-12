@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require('dotenv').config();
+const { ethers } = require('ethers');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -39,7 +40,8 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY_1],
       url: process.env.POLYGON_URL,
       chainId: 137,
-      gasPrice: 50000000,
+      gasPrice: 35000000000,
+      saveDeployments: true,
     }
   },
   solidity: {

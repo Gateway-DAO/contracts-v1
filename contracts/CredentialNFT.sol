@@ -3,10 +3,11 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
-contract CredentialNFT is ERC721URIStorage, ERC2771Context, Ownable {
+contract CredentialNFT is ERC721URIStorage, ERC2771Context, Pausable, Ownable {
     using Counters for Counters.Counter;
 
     mapping(string => bool) userMetaDataURIMinted;
@@ -18,13 +19,21 @@ contract CredentialNFT is ERC721URIStorage, ERC2771Context, Ownable {
 
     constructor(address _trustedForwarder) ERC721("Credential NFT", "GNFT") ERC2771Context(_trustedForwarder) {}
 
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
     /**
      * @dev A method to mint NFT
      * 		Same NFT Mint is allowed only once for the same user.
      * @param to : Address to be minted
      * 		_tokenURI: metadataURI for NFT
      */
-    function mint(address to, string memory _tokenURI) external virtual {
+    function mint(address to, string memory _tokenURI) external whenNotPaused virtual {
         require(
             userMetaDataURIMinted[_tokenURI] == false,
             "CredentialNFT: you're not allowed to mint a credential more than once."
